@@ -93,6 +93,7 @@ Does not check if the file is managed by chezmoi."
                                 file
                               (chezmoi-source-file file))))
 
+;;;###autoload
 (defun chezmoi-diff (arg)
   "View output of =chezmoi diff= in a diff-buffer.
 If ARG is non-nil, switch to the diff-buffer."
@@ -109,6 +110,7 @@ If ARG is non-nil, switch to the diff-buffer."
 
 (defvar chezmoi--merge-procs nil "List of chezmoi merge processes.")
 
+;;;###autoload
 (defun chezmoi-merge (file)
   "Runs chezmoi merge on `FILE'.
 Requires chezmoi to be configured with an external mergetool (emacs, perhaps?)."
@@ -120,6 +122,7 @@ Requires chezmoi to be configured with an external mergetool (emacs, perhaps?)."
     (push (start-process-shell-command "chezmoi" nil (concat "chezmoi merge " file))
           chezmoi--merge-procs)))
 
+;;;###autoload
 (defun chezmoi-merge-all ()
   "Call 'chezmoi merge-all'."
   (interactive)
@@ -241,6 +244,7 @@ Requires chezmoi to be configured with an external mergetool (emacs, perhaps?)."
 		 chezmoi--dispatch
 		 cl-first)))
 
+;;;###autoload
 (defun chezmoi-write (&optional file arg)
   "Sync FILE.  How it syncs depends if FILE is in source or target.
 If FILE is in source state, run =chezmoi apply= on the target to overwrite it.
@@ -296,6 +300,7 @@ PROMPT, CHOICES, and CATEGORY are passed to `complete-with-action'."
         (dolist (i chezmoi-use-template-source-mode-regex ret)
         (setq ret (or ret (string-match i file))))))
 
+;;;###autoload
 (defun chezmoi-find (file)
   "Edit a source FILE managed by chezmoi.
 If the target file has the same state as the source file,add a hook to
@@ -325,6 +330,7 @@ Note: Does not run =chezmoi edit=."
         (unless chezmoi-mode (chezmoi-mode))
         source-file))))
 
+;;;###autoload
 (defun chezmoi-sync-files (files &optional arg)
   "Iteratively select file from FILES to sync.
 Interactively select whether to sync the source state or the target state.
@@ -344,6 +350,7 @@ Prefix ARG is passed to `chezmoi-write'."
 		(chezmoi-write file arg))
       (setq files (remove file files)))))
 
+;;;###autoload
 (defun chezmoi-open-other (file)
   "Open buffer's target FILE."
   (interactive (list (buffer-file-name)))
@@ -355,6 +362,7 @@ Prefix ARG is passed to `chezmoi-write'."
   "Keywords for font lock."
   `((,chezmoi-template-regex 0 'chezmoi-template-face prepend)))
 
+;;;###autoload
 (define-minor-mode chezmoi-mode
   "Chezmoi mode for source files."
   :group 'chezmoi

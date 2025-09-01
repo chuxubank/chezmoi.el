@@ -74,7 +74,7 @@ N, BUF-TYPE, CTRL-BUF, START, and END are all passed to `ediff'."
   (advice-remove 'ediff-get-region-contents #'chezmoi-ediff--ediff-get-region-contents))
 
 (defun chezmoi--get-ancestor (source-file)
-  "Create a tempf file for the source file at git HEAD ."
+  "Create a temp file for the source file at git HEAD ."
   (let* ((relative (substring source-file (length chezmoi-root)))
          (rev (substring (shell-command-to-string "git rev-parse --short HEAD") 0 -1))
          (temp-name (expand-file-name relative (expand-file-name rev temporary-file-directory))))
@@ -84,6 +84,7 @@ N, BUF-TYPE, CTRL-BUF, START, and END are all passed to `ediff'."
                      (current-buffer)))
     temp-name))
 
+;;;###autoload
 (defun chezmoi-ediff-merge (file)
   "Start an `ediff-merge-with-ancestor' session of `FILE'.
 Merge source, target, and ancestor.
@@ -119,6 +120,7 @@ Return the new buffer."
                buf)
         buf))
 
+;;;###autoload
 (defun chezmoi-ediff (file)
   "Choose a FILE to merge with its source using `ediff'.
 If the current file is in `chezmoi-mode', diff the current file.
