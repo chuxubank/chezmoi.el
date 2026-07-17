@@ -30,9 +30,10 @@
     (should (chezmoi-template-file-p "/tmp/chezmoi/modify_dot_config"))
     (should-not (chezmoi-template-file-p "/tmp/chezmoi/run.sh.tmpl.bak"))))
 
-(ert-deftest chezmoi-activates-template-polymode-for-source-buffer ()
+(ert-deftest chezmoi-activates-template-polymode-for-host-buffer ()
   (with-temp-buffer
     (setq buffer-file-name "/tmp/chezmoi/modify_dot_config")
+    (sh-mode)
     (let ((chezmoi-root "/tmp/chezmoi/")
           (chezmoi-mode t)
           (activated nil))
@@ -40,6 +41,14 @@
                  (lambda () (setq activated t))))
         (chezmoi-template--activate-go-template-mode))
       (should activated))))
+
+(ert-deftest chezmoi-uses-go-template-mode-for-plain-template ()
+  (with-temp-buffer
+    (setq buffer-file-name "/tmp/chezmoi/modify_dot_config")
+    (let ((chezmoi-root "/tmp/chezmoi/")
+          (chezmoi-mode t))
+      (chezmoi-template--activate-go-template-mode)
+      (should (eq major-mode 'go-template-ts-mode)))))
 
 (ert-deftest chezmoi-does-not-activate-template-polymode-for-nontemplate ()
   (with-temp-buffer

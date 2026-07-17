@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.2.1
+;; Version: 1.2.2
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
@@ -37,6 +37,7 @@
 ;;; Code:
 (require 'subr-x)
 (require 'chezmoi-core)
+(require 'go-template-ts-mode)
 (require 'poly-any-go-template)
 
 (defun chezmoi-template--activate-go-template-mode ()
@@ -47,7 +48,11 @@ This is called by `chezmoi-mode' before its legacy font-lock keywords run."
              buffer-file-name
              (chezmoi-template-source-file-p buffer-file-name)
              (not (bound-and-true-p polymode-mode)))
-    (poly-any-go-template-mode)))
+    (cond ((eq major-mode 'go-template-ts-mode))
+          ((memq major-mode '(fundamental-mode text-mode))
+           (go-template-ts-mode))
+          (t
+           (poly-any-go-template-mode)))))
 
 (defcustom chezmoi-template-display-p nil
   "Whether to display templates."
