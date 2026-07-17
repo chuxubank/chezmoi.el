@@ -40,6 +40,9 @@
   "Customization group for `chezmoi-mode'."
   :group 'chezmoi)
 
+(defvar chezmoi-mode nil)
+(declare-function chezmoi-mode "chezmoi" ())
+
 (defcustom chezmoi-command "chezmoi"
   "The location of the chezmoi command."
   :type '(string)
