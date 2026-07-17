@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.2.2
+;; Version: 1.3.0
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
@@ -41,10 +41,12 @@
 (require 'go-template-ts-mode)
 (require 'poly-any-go-template)
 
+(declare-function chezmoi-template-source-file-p "chezmoi-core" (file))
+
 (defun chezmoi-template--activate-go-template-mode ()
   "Use Go-template polymode for Chezmoi template source buffers.
 The current major mode remains the host mode inferred from the target file.
-This is called by `chezmoi-mode' before its legacy font-lock keywords run."
+This is called by `chezmoi-mode' before template display is initialized."
   (when (and (bound-and-true-p chezmoi-mode)
              buffer-file-name
              (chezmoi-template-source-file-p buffer-file-name)
@@ -61,8 +63,16 @@ This is called by `chezmoi-mode' before its legacy font-lock keywords run."
   :group 'chezmoi
   :local t)
 
+(defcustom chezmoi-template-display-delay 0.2
+  "Idle delay before refreshing displayed template values after a change."
+  :type '(number)
+  :group 'chezmoi)
+
 (defvar-local chezmoi-template--buffer-displayed-p nil
   "Whether all templates are currently displayed in buffer.")
+
+(defvar-local chezmoi-template--display-timer nil
+  "Pending idle timer for refreshing displayed template values.")
 
 (defvar chezmoi-template-key-regex "\\."
   "Regex for splitting keys.")
@@ -89,25 +99,25 @@ This is called by `chezmoi-mode' before its legacy font-lock keywords run."
 Only direct selector expressions such as `{{ .foo }}' are returned."
   (when (and (treesit-ready-p 'gotmpl)
              (treesit-parser-list))
-    (let* ((children (treesit-node-children
-                      (treesit-buffer-root-node 'gotmpl)))
-           (length (length children))
+    (let ((children (treesit-node-children
+                     (treesit-buffer-root-node 'gotmpl)))
            (minimum (or minimum (point-min)))
            (maximum (or maximum (point-max)))
            spans)
-      (cl-loop for index from 1 below (1- length)
-               for opening = (nth (1- index) children)
-               for node = (nth index children)
-               for closing = (nth (1+ index) children)
-               for start = (treesit-node-start opening)
-               for end = (treesit-node-end closing)
-               when (and (member (treesit-node-type opening) '("{{" "{{-"))
-                         (equal (treesit-node-type node) "selector_expression")
-                         (member (treesit-node-type closing) '("}}" "-}}"))
-                         (<= minimum start)
-                         (<= end maximum))
-               do (push (cons start end) spans)
-               finally return (nreverse spans)))))
+      (while (cddr children)
+        (let* ((opening (car children))
+               (node (cadr children))
+               (closing (caddr children))
+               (start (treesit-node-start opening))
+               (end (treesit-node-end closing)))
+          (when (and (member (treesit-node-type opening) '("{{" "{{-"))
+                     (equal (treesit-node-type node) "selector_expression")
+                     (member (treesit-node-type closing) '("}}" "-}}"))
+                     (<= minimum start)
+                     (<= end maximum))
+            (push (cons start end) spans))
+          (setq children (cdr children))))
+      (nreverse spans))))
 
 (defun chezmoi-template--put-display-value (start end value &optional object)
   "Display the VALUE from START to END in string or buffer OBJECT."
@@ -126,8 +136,8 @@ VALUE is ignored."
                                           display ,value
                                           chezmoi t)
                               object)
-      (font-lock-ensure start end)
-      (font-lock-flush start end))))
+      (font-lock-flush start end)
+      (font-lock-ensure start end))))
 
 (defun chezmoi-template--funcall-over-spans (f spans buffer-or-name)
   "Call F for SPANS in BUFFER-OR-NAME after executing each expression."
@@ -172,9 +182,12 @@ When START is non-nil, find only the region around START."
     (let ((end (or start 1))
           (buf (current-buffer)))
       (if start
-          (let ((start (previous-single-property-change end 'chezmoi buf))
-                (end (next-single-property-change start 'chezmoi buf)))
-            (funcall f start end buffer-or-name))
+          (let* ((start (or (previous-single-property-change
+                             end 'chezmoi buf)
+                            (point-min)))
+                 (end (next-single-property-change start 'chezmoi buf)))
+            (when (and end (> end start))
+              (funcall f start end buffer-or-name)))
         (while (and (setq start (next-single-property-change end 'chezmoi buf))
                     (setq end (next-single-property-change start 'chezmoi buf)))
           (funcall f start end buffer-or-name))))))
@@ -188,24 +201,46 @@ START is passed to `chezmoi-template--funcall-over-display-properties'."
                        (setq-local chezmoi-template-display-p display-p)
                        display-p)
                      nil))
-  (remove-hook 'after-change-functions #'chezmoi-template--after-change 1)
+  (let ((buffer-or-name (or buffer-or-name (current-buffer))))
+    (with-current-buffer buffer-or-name
+      (chezmoi-template--cancel-display-timer)
+      (remove-hook 'after-change-functions #'chezmoi-template--after-change t)
+      (let ((was-modified-p (buffer-modified-p)))
+        (setq chezmoi-template--buffer-displayed-p
+              (and display-p chezmoi-template-display-p))
+        (if chezmoi-template--buffer-displayed-p
+            (chezmoi-template--funcall-over-matches
+             #'chezmoi-template--put-display-value buffer-or-name)
+          (chezmoi-template--funcall-over-display-properties
+           #'chezmoi-template--remove-display-value start buffer-or-name))
+        (unless was-modified-p
+          (set-buffer-modified-p nil)))
+      (add-hook 'after-change-functions
+                #'chezmoi-template--after-change nil t))))
 
-  (let* ((buffer-or-name (or buffer-or-name (current-buffer)))
-         (was-modified-p (buffer-modified-p buffer-or-name)))
-    (setq chezmoi-template--buffer-displayed-p (and display-p chezmoi-template-display-p))
-    (if chezmoi-template--buffer-displayed-p
-        (when chezmoi-template-display-p
-          (chezmoi-template--funcall-over-matches #'chezmoi-template--put-display-value buffer-or-name))
-      (chezmoi-template--funcall-over-display-properties #'chezmoi-template--remove-display-value start buffer-or-name))
-    (unless was-modified-p (with-current-buffer buffer-or-name
-                             (set-buffer-modified-p nil))))
+(defun chezmoi-template--cancel-display-timer ()
+  "Cancel the pending template display refresh in the current buffer."
+  (when (timerp chezmoi-template--display-timer)
+    (cancel-timer chezmoi-template--display-timer))
+  (setq chezmoi-template--display-timer nil))
 
-  (add-hook 'after-change-functions #'chezmoi-template--after-change nil 1))
+(defun chezmoi-template--refresh-after-change (buffer)
+  "Refresh displayed templates in BUFFER after an idle delay."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq chezmoi-template--display-timer nil)
+      (when chezmoi-template--buffer-displayed-p
+        (chezmoi-template-buffer-display nil)
+        (chezmoi-template-buffer-display t)))))
 
 (defun chezmoi-template--after-change (_ _ _)
-  "Refresh templates after each change."
-  (chezmoi-template-buffer-display nil)
-  (chezmoi-template-buffer-display t))
+  "Schedule a refresh of displayed templates after an idle delay."
+  (when chezmoi-template--buffer-displayed-p
+    (chezmoi-template--cancel-display-timer)
+    (setq chezmoi-template--display-timer
+          (run-with-idle-timer chezmoi-template-display-delay nil
+                               #'chezmoi-template--refresh-after-change
+                               (current-buffer)))))
 
 (provide 'chezmoi-template)
 

@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.2.3
+;; Version: 1.3.0
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0")
 ;;                     (transient "0.4.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
@@ -43,6 +43,13 @@
 (require 'shell)
 (require 'subr-x)
 (require 'transient)
+
+(defvar chezmoi-mode nil)
+
+(declare-function chezmoi-template--activate-go-template-mode "chezmoi-template" ())
+(declare-function chezmoi-template--after-change "chezmoi-template" (&rest _))
+(declare-function chezmoi-template-buffer-display "chezmoi-template" (&optional display-p start buffer-or-name))
+(declare-function chezmoi-template-source-file-p "chezmoi-core" (file))
 
 (defmacro chezmoi--locally (&rest body)
   "Ensure BODY is run with a local `default-directory'."
@@ -112,8 +119,9 @@
 	       (member (expand-file-name file))))
 
 (defun chezmoi-source-file-p (file)
-  "Returns non-nil if `FILE' is in the source state."
-  (string-match chezmoi-root file))
+  "Return non-nil if `FILE' is in the source state."
+  (and file chezmoi-root
+       (file-in-directory-p file chezmoi-root)))
 
 (defun chezmoi-encrypted-p (file)
   "Returns non-nil if `FILE' is encrypted in the source state."

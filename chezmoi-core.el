@@ -2,9 +2,9 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.1.0
-;; Package-Requires: ((emacs "26.1"))
-;; Homepage: http://www.github.com/tuh8888/chezmoi.el
+;; Version: 1.3.0
+;; Package-Requires: ((emacs "29.1"))
+;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
 
 
@@ -36,6 +36,8 @@
 
 ;;; Code:
 
+(require 'subr-x)
+
 (defgroup chezmoi nil
   "Customization group for `chezmoi-mode'."
   :group 'chezmoi)
@@ -59,11 +61,20 @@ If the target has been changed, it will be overwritten."
   :group 'chezmoi
   :type '(boolean))
 
-(defcustom chezmoi-root (file-name-as-directory
-             (substring (shell-command-to-string "chezmoi source-path") 0 -1))
-"The source directory for chezmoi."
+(defun chezmoi--default-root ()
+  "Return the configured chezmoi source directory, if available."
+  (when-let ((command (executable-find chezmoi-command)))
+    (with-temp-buffer
+      (when (zerop (call-process command nil t nil "source-path"))
+        (let ((path (string-trim (buffer-string))))
+          (unless (string-empty-p path)
+            (file-name-as-directory (expand-file-name path))))))))
+
+(defcustom chezmoi-root (chezmoi--default-root)
+  "The source directory for chezmoi.
+When nil, Chezmoi is unavailable or has not reported a source directory."
   :group 'chezmoi
-  :type '(string))
+  :type '(choice (const :tag "Auto/unavailable" nil) directory))
 
 (defvar chezmoi-command-error-regex "chezmoi:"
   "Regex for detecting if chezmoi has encountered an error.")
@@ -102,8 +113,10 @@ Chezmoi marks templates with a `.tmpl' suffix or a `modify_' prefix."
           (string-prefix-p "modify_" name)))))
 
 (defun chezmoi--mode-from-path ()
-  "Activate `chezmoi-mode' in source files based on their path"
-  (when (string-match chezmoi-root (buffer-file-name))
+  "Activate `chezmoi-mode' in source files based on their path."
+  (when (and chezmoi-root
+             buffer-file-name
+             (file-in-directory-p buffer-file-name chezmoi-root))
     (unless chezmoi-mode (chezmoi-mode))))
 
 (add-hook 'find-file-hook #'chezmoi--mode-from-path)

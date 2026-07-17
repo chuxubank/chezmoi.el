@@ -5,6 +5,7 @@
 (require 'cl-lib)
 (require 'ert)
 (require 'chezmoi)
+(require 'chezmoi-cape)
 
 (ert-deftest chezmoi-find-scripts-is-command ()
   (should (commandp #'chezmoi-find-scripts)))
@@ -29,6 +30,23 @@
     (should (chezmoi-template-file-p "/tmp/chezmoi/run.sh.tmpl"))
     (should (chezmoi-template-file-p "/tmp/chezmoi/modify_dot_config"))
     (should-not (chezmoi-template-file-p "/tmp/chezmoi/run.sh.tmpl.bak"))))
+
+(ert-deftest chezmoi-source-file-p-treats-root-as-a-path ()
+  (let* ((root (make-temp-file "chezmoi.root" t))
+         (chezmoi-root (file-name-as-directory root))
+         (source (expand-file-name "dot_config" root)))
+    (unwind-protect
+        (progn
+          (with-temp-file source)
+          (should (chezmoi-source-file-p source))
+          (should-not (chezmoi-source-file-p
+                       (concat (directory-file-name root) "X/dot_config"))))
+      (delete-directory root t))))
+
+(ert-deftest chezmoi-mode-from-path-ignores-buffers-without-files ()
+  (with-temp-buffer
+    (let ((chezmoi-root "/tmp/chezmoi/"))
+      (should-not (chezmoi--mode-from-path)))))
 
 (ert-deftest chezmoi-activates-template-polymode-for-host-buffer ()
   (with-temp-buffer
@@ -60,6 +78,31 @@
       (should (equal (buffer-substring-no-properties
                       (caar spans) (cdar spans))
                      "{{ .chezmoi.os }}")))))
+
+(ert-deftest chezmoi-template-after-change-is-debounced ()
+  (with-temp-buffer
+    (let ((chezmoi-template--buffer-displayed-p t)
+          (chezmoi-template-display-delay 10))
+      (unwind-protect
+          (progn
+            (chezmoi-template--after-change nil nil nil)
+            (should (timerp chezmoi-template--display-timer)))
+        (chezmoi-template--cancel-display-timer)))))
+
+(ert-deftest chezmoi-capf-completes-the-final-selector-segment ()
+  (skip-unless (treesit-ready-p 'gotmpl))
+  (with-temp-buffer
+    (insert "{{ .chezmoi.o }}")
+    (go-template-ts-mode)
+    (goto-char (- (point-max) 3))
+    (let ((data (make-hash-table :test #'equal))
+          (chezmoi-data (make-hash-table :test #'equal)))
+      (puthash "os" "darwin" chezmoi-data)
+      (puthash "chezmoi" chezmoi-data data)
+      (cl-letf (((symbol-function 'chezmoi-get-data) (lambda () data)))
+        (pcase-let ((`(,beg ,end ,table . ,_) (chezmoi-capf)))
+          (should (equal (buffer-substring-no-properties beg end) "o"))
+          (should (equal (all-completions "o" table) '("os"))))))))
 
 (ert-deftest chezmoi-template-uses-treesit-in-polymode ()
   (skip-unless (treesit-ready-p 'gotmpl))

@@ -1,10 +1,10 @@
-;;; chezmoi-company.el --- Company completion for chezmoi -*- lexical-binding: t -*-
+;;; chezmoi-cape.el --- Cape completion for chezmoi -*- lexical-binding: t -*-
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.1.0
-;; Package-Requires: ((emacs "27.1") (cape "0.34") (chezmoi "1.1.0"))
-;; Homepage: http://www.github.com/tuh8888/chezmoi.el
+;; Version: 1.3.0
+;; Package-Requires: ((emacs "29.1") (chezmoi "1.3.0"))
+;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
 
 
@@ -31,7 +31,6 @@
 ;;; Code:
 
 (require 'chezmoi)
-(require 'cape)
 
 (defvar chezmoi-cape--properties
   (list :annotation-function (lambda (_) " Keyword")
@@ -43,33 +42,36 @@
   "Return candidates for STR for company completion.
 Candidates are chezmoi data values corresponding to the path at point."
   (let* ((keys (thread-last chezmoi-template-key-regex
-			    (split-string str)
-			    butlast
-			    (remove "")))
-	 (hashget (lambda (m k) (gethash k m)))
+				    (split-string str)
+				    butlast
+				    (remove "")))
+		 (hashget (lambda (m k)
+                            (when (hash-table-p m)
+                              (gethash k m))))
 	 (data (thread-last (chezmoi-get-data)
 			    (cl-reduce hashget keys :initial-value))))
-    (if (hash-table-p data)
-	(hash-table-keys data)
-      (list data))))
+    (cond ((hash-table-p data) (hash-table-keys data))
+          ((stringp data) (list data))
+          (t nil))))
 
-(defun chezmoi-cape--bounds ()
-  "Return the bounds of the Go template selector at point."
-  (when-let ((node (chezmoi-template--selector-node-at-point)))
-    (cons (treesit-node-start node)
-          (treesit-node-end node))))
+(defun chezmoi-cape--bounds (node)
+  "Return completion bounds for the final segment of selector NODE."
+  (save-excursion
+    (goto-char (min (point) (treesit-node-end node)))
+    (skip-syntax-backward "w_" (treesit-node-start node))
+    (cons (point) (treesit-node-end node))))
 
 (defun chezmoi-capf ()
   "Complete current template."
-  (when-let ((bounds (chezmoi-cape--bounds)))
-    (let* ((beg (car bounds))
+  (when-let ((node (chezmoi-template--selector-node-at-point)))
+    (let* ((bounds (chezmoi-cape--bounds node))
+           (beg (car bounds))
            (end (cdr bounds))
-           (text (buffer-substring-no-properties beg end))
+           (text (treesit-node-text node t))
            (candidates (chezmoi-cape--next-keys text)))
       `(,beg ,end
-             ,(cape--table-with-properties
-               (cape--cached-table beg end candidates 'prefix)
-               :category 'cape-keyword)
+             ,(completion-table-dynamic (lambda (_) candidates))
+             :category chezmoi-template
              ,@chezmoi-cape--properties))))
 
 (provide 'chezmoi-cape)

@@ -20,6 +20,17 @@ The recording above demonstrates editing a chezmoi template with source file on 
 (use-package chezmoi)
   #+end_src
 
+  For development, install the package dependencies and run the checks with:
+
+  #+begin_src shell
+make install-deps
+make
+make compile-extensions
+  #+end_src
+
+  ~compile-all-extensions~ additionally checks the optional Company and Magit
+  integrations when those packages are installed.
+
   Add keybindings to some functions. Or call using ~M-x <cmd>~.
 
   #+begin_src emacs-lisp :noweb yes
@@ -76,8 +87,11 @@ The recording above demonstrates editing a chezmoi template with source file on 
                                             (delete 'chezmoi-company-backend 'company-backends))))
    #+end_src
 
-** Cape
-   Cape integration is provided through ~chezmoi-capf~. Simply add it to to ~completion-at-point-functions~. This will show completions for when editing template variables.
+** Completion at point
+   Standard completion-at-point integration is provided through ~chezmoi-capf~.
+   It works with completion UIs such as Corfu and Company without depending on
+   Cape internals. Add it to ~completion-at-point-functions~ to complete
+   template variables.
 
    #+begin_src emacs-lisp :noweb yes
 (require 'chezmoi-cape)

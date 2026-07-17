@@ -2,9 +2,9 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.1.0
-;; Package-Requires: ((emacs "26.1") (chezmoi "1.1.0"))
-;; Homepage: http://www.github.com/tuh8888/chezmoi.el
+;; Version: 1.3.0
+;; Package-Requires: ((emacs "29.1") (chezmoi "1.3.0"))
+;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
 
 
@@ -70,8 +70,10 @@ N, BUF-TYPE, CTRL-BUF, START, and END are all passed to `ediff'."
 		   (with-current-buffer ediff-buffer-B (buffer-string)))
 	(chezmoi-write source-file t)))))
 
-(defvar chezmoi-ediff--ediff-quit-hook ()
-  (advice-remove 'ediff-get-region-contents #'chezmoi-ediff--ediff-get-region-contents))
+(defun chezmoi-ediff--ediff-quit-hook ()
+  "Remove the temporary template-aware Ediff advice."
+  (advice-remove 'ediff-get-region-contents
+                 #'chezmoi-ediff--ediff-get-region-contents))
 
 (defun chezmoi--get-ancestor (source-file)
   "Create a temp file for the source file at git HEAD ."
