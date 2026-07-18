@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.0
+;; Version: 1.4.1
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
@@ -42,7 +42,20 @@
 (require 'poly-any-go-template)
 
 (declare-function chezmoi-template-source-file-p "chezmoi-core" (file))
+(declare-function chezmoi-template-directory-file-p "chezmoi-core" (file))
 (declare-function chezmoi-get-data "chezmoi" ())
+
+(defun chezmoi-template--filename-has-host-mode-p (file)
+  "Return non-nil when FILE names a host language after removing `.tmpl'."
+  (file-name-extension
+   (string-remove-suffix ".tmpl" (file-name-nondirectory file))))
+
+(defun chezmoi-template--activate-polymode (file)
+  "Activate Go-template polymode using the host extension in FILE."
+  (let ((buffer-file-name (if (string-suffix-p ".tmpl" file)
+                              file
+                            (concat file ".tmpl"))))
+    (poly-any-go-template-mode)))
 
 (defun chezmoi-template--activate-go-template-mode ()
   "Use Go-template polymode for Chezmoi template source buffers.
@@ -52,11 +65,18 @@ This is called by `chezmoi-mode' before template display is initialized."
              buffer-file-name
              (chezmoi-template-source-file-p buffer-file-name)
              (not (bound-and-true-p polymode-mode)))
-    (cond ((eq major-mode 'go-template-ts-mode))
+    (cond ((and (chezmoi-template-directory-file-p buffer-file-name)
+                (chezmoi-template--filename-has-host-mode-p
+                 buffer-file-name))
+           (chezmoi-template--activate-polymode buffer-file-name))
+          ((chezmoi-template-directory-file-p buffer-file-name)
+           (unless (eq major-mode 'go-template-ts-mode)
+             (go-template-ts-mode)))
+          ((eq major-mode 'go-template-ts-mode))
           ((memq major-mode '(fundamental-mode text-mode))
            (go-template-ts-mode))
           (t
-           (poly-any-go-template-mode)))
+           (chezmoi-template--activate-polymode buffer-file-name)))
     (setq-local chezmoi-mode t)))
 
 (defcustom chezmoi-template-display-p nil

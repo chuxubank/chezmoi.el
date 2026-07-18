@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.0
+;; Version: 1.4.1
 ;; Package-Requires: ((emacs "29.1"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
@@ -76,6 +76,11 @@ When nil, Chezmoi is unavailable or has not reported a source directory."
   :group 'chezmoi
   :type '(choice (const :tag "Auto/unavailable" nil) directory))
 
+(defcustom chezmoi-auto-enable-mode t
+  "Whether visiting files below `chezmoi-root' enables `chezmoi-mode'."
+  :group 'chezmoi
+  :type 'boolean)
+
 (defvar chezmoi-command-error-regex "chezmoi:"
   "Regex for detecting if chezmoi has encountered an error.")
 
@@ -104,17 +109,27 @@ When nil, Chezmoi is unavailable or has not reported a source directory."
     ".tmpl")
   "Source state attribute suffixes.")
 
+(defun chezmoi-template-directory-file-p (file)
+  "Return non-nil when FILE is below a `.chezmoitemplates' directory."
+  (and file
+       (member ".chezmoitemplates"
+               (file-name-split
+                (file-name-directory (expand-file-name file))))))
+
 (defun chezmoi-template-source-file-p (file)
   "Return non-nil when FILE contains a Go template.
-Chezmoi marks templates with a `.tmpl' suffix or a `modify_' prefix."
+Chezmoi marks templates with a `.tmpl' suffix or a `modify_' prefix.
+Every file below a `.chezmoitemplates' directory is also a template."
   (when file
     (let ((name (file-name-nondirectory file)))
-      (or (string-suffix-p ".tmpl" name)
+      (or (chezmoi-template-directory-file-p file)
+          (string-suffix-p ".tmpl" name)
           (string-prefix-p "modify_" name)))))
 
 (defun chezmoi--mode-from-path ()
   "Activate `chezmoi-mode' in source files based on their path."
-  (when (and chezmoi-root
+  (when (and chezmoi-auto-enable-mode
+             chezmoi-root
              buffer-file-name
              (file-in-directory-p buffer-file-name chezmoi-root))
     (unless chezmoi-mode (chezmoi-mode))))

@@ -46,6 +46,12 @@
   (let ((chezmoi-root "/tmp/chezmoi/"))
     (should (chezmoi-template-file-p "/tmp/chezmoi/run.sh.tmpl"))
     (should (chezmoi-template-file-p "/tmp/chezmoi/modify_dot_config"))
+    (should (chezmoi-template-file-p
+             "/tmp/chezmoi/.chezmoitemplates/Brewfile"))
+    (should (chezmoi-template-file-p
+             "/tmp/chezmoi/.chezmoitemplates/script.sh"))
+    (should-not (chezmoi-template-file-p
+                 "/tmp/chezmoi/.chezmoitemplates-old/Brewfile"))
     (should-not (chezmoi-template-file-p "/tmp/chezmoi/run.sh.tmpl.bak"))))
 
 (ert-deftest chezmoi-source-file-p-treats-root-as-a-path ()
@@ -64,6 +70,24 @@
   (with-temp-buffer
     (let ((chezmoi-root "/tmp/chezmoi/"))
       (should-not (chezmoi--mode-from-path)))))
+
+(ert-deftest chezmoi-mode-from-path-can-be-disabled ()
+  (let* ((root (make-temp-file "chezmoi.root" t))
+         (chezmoi-root (file-name-as-directory root))
+         (file (expand-file-name "dot_config" root))
+         (mode-calls 0))
+    (unwind-protect
+        (with-temp-buffer
+          (setq buffer-file-name file)
+          (cl-letf (((symbol-function 'chezmoi-mode)
+                     (lambda (&optional _arg) (cl-incf mode-calls))))
+            (let ((chezmoi-auto-enable-mode nil))
+              (chezmoi--mode-from-path))
+            (should (= mode-calls 0))
+            (let ((chezmoi-auto-enable-mode t))
+              (chezmoi--mode-from-path))
+            (should (= mode-calls 1))))
+      (delete-directory root t))))
 
 (ert-deftest chezmoi-activates-template-polymode-for-host-buffer ()
   (with-temp-buffer
@@ -84,6 +108,36 @@
       (setq-local chezmoi-mode t)
       (chezmoi-template--activate-go-template-mode)
       (should (eq major-mode 'go-template-ts-mode)))))
+
+(ert-deftest chezmoi-template-directory-uses-go-template-mode-without-host-extension ()
+  (dolist (file '("/tmp/chezmoi/.chezmoitemplates/Brewfile"
+                  "/tmp/chezmoi/.chezmoitemplates/script.tmpl"))
+    (with-temp-buffer
+      (setq buffer-file-name file)
+      (setq-local chezmoi-mode t)
+      (let ((go-template-calls 0)
+            (polymode-calls 0))
+        (cl-letf (((symbol-function 'go-template-ts-mode)
+                   (lambda () (cl-incf go-template-calls)))
+                  ((symbol-function 'poly-any-go-template-mode)
+                   (lambda () (cl-incf polymode-calls))))
+          (chezmoi-template--activate-go-template-mode))
+        (should (= go-template-calls 1))
+        (should (= polymode-calls 0))))))
+
+(ert-deftest chezmoi-template-directory-uses-host-extension-for-polymode ()
+  (dolist (case '(("/tmp/chezmoi/.chezmoitemplates/script.sh"
+                   . "/tmp/chezmoi/.chezmoitemplates/script.sh.tmpl")
+                  ("/tmp/chezmoi/.chezmoitemplates/script.sh.tmpl"
+                   . "/tmp/chezmoi/.chezmoitemplates/script.sh.tmpl")))
+    (with-temp-buffer
+      (setq buffer-file-name (car case))
+      (setq-local chezmoi-mode t)
+      (let (activated-file)
+        (cl-letf (((symbol-function 'poly-any-go-template-mode)
+                   (lambda () (setq activated-file buffer-file-name))))
+          (chezmoi-template--activate-go-template-mode))
+        (should (equal activated-file (cdr case)))))))
 
 (ert-deftest chezmoi-template-uses-treesit-expression-spans ()
   (skip-unless (treesit-ready-p 'gotmpl))
