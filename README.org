@@ -25,6 +25,11 @@ The recording above demonstrates editing a chezmoi template with source file on 
   Files below ~chezmoi-root~ enable ~chezmoi-mode~ when visited. Set
   ~chezmoi-auto-enable-mode~ to nil to disable this behavior.
 
+  Template values are displayed by default. Customize
+  ~chezmoi-template-display-p~ to nil to keep the source expressions visible.
+  The display can also be toggled per buffer with
+  ~chezmoi-template-buffer-display~.
+
   For development, install the package dependencies and run the checks with:
 
   #+begin_src shell

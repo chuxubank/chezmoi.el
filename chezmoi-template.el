@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.1
+;; Version: 1.4.2
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
@@ -79,7 +79,7 @@ This is called by `chezmoi-mode' before template display is initialized."
            (chezmoi-template--activate-polymode buffer-file-name)))
     (setq-local chezmoi-mode t)))
 
-(defcustom chezmoi-template-display-p nil
+(defcustom chezmoi-template-display-p t
   "Whether to display templates."
   :type '(boolean)
   :group 'chezmoi
@@ -157,29 +157,48 @@ This is called by `chezmoi-mode' before template display is initialized."
              :category chezmoi-template
              ,@chezmoi-template--completion-properties))))
 
+(defun chezmoi-template--selector-action-span (node)
+  "Return the complete action span when NODE is its only expression."
+  (unless (equal (treesit-node-type (treesit-node-parent node))
+                 "selector_expression")
+    (save-excursion
+      (goto-char (treesit-node-start node))
+      (when (re-search-backward "{{-?" nil t)
+        (let ((start (match-beginning 0))
+              (content-start (match-end 0)))
+          (goto-char (treesit-node-end node))
+          (when (re-search-forward "-?}}" nil t)
+            (let ((content-end (match-beginning 0))
+                  (end (match-end 0)))
+              (when (and
+                     (string-match-p
+                      "\\`[[:space:]]*\\'"
+                      (buffer-substring-no-properties
+                       content-start (treesit-node-start node)))
+                     (string-match-p
+                      "\\`[[:space:]]*\\'"
+                      (buffer-substring-no-properties
+                       (treesit-node-end node) content-end)))
+                (cons start end)))))))))
+
 (defun chezmoi-template--treesit-expression-spans (&optional minimum maximum)
   "Return simple Go template expression spans in the current buffer.
 Only direct selector expressions such as `{{ .foo }}' are returned."
   (when (and (treesit-ready-p 'gotmpl)
              (treesit-parser-list))
-    (let ((children (treesit-node-children
-                     (treesit-buffer-root-node 'gotmpl)))
-           (minimum (or minimum (point-min)))
-           (maximum (or maximum (point-max)))
-           spans)
-      (while (cddr children)
-        (let* ((opening (car children))
-               (node (cadr children))
-               (closing (caddr children))
-               (start (treesit-node-start opening))
-               (end (treesit-node-end closing)))
-          (when (and (member (treesit-node-type opening) '("{{" "{{-"))
-                     (equal (treesit-node-type node) "selector_expression")
-                     (member (treesit-node-type closing) '("}}" "-}}"))
-                     (<= minimum start)
-                     (<= end maximum))
-            (push (cons start end) spans))
-          (setq children (cdr children))))
+    (let ((minimum (or minimum (point-min)))
+          (maximum (or maximum (point-max)))
+          spans)
+      (dolist (capture
+               (treesit-query-capture
+                (treesit-buffer-root-node 'gotmpl)
+                '((selector_expression) @selector)
+                minimum maximum))
+        (when-let ((span (chezmoi-template--selector-action-span
+                          (cdr capture))))
+          (when (and (<= minimum (car span))
+                     (<= (cdr span) maximum))
+            (push span spans))))
       (nreverse spans))))
 
 (defun chezmoi-template--put-display-value (start end value &optional object)

@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.1
+;; Version: 1.4.2
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0")
 ;;                     (transient "0.4.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
@@ -201,6 +201,12 @@ Requires chezmoi to be configured with an external mergetool (emacs, perhaps?)."
 	      (chezmoi-target-file file)
 	    file)
 	  (chezmoi-changed-files)))
+
+(defun chezmoi--write-after-save ()
+  "Write the current source file when its destination should be updated."
+  (when (or chezmoi-mode-overwrite-destination
+            (chezmoi-changed-p buffer-file-name))
+    (chezmoi-write)))
 
 (defun chezmoi-version ()
   "Get version number of chezmoi."
@@ -404,11 +410,11 @@ Prefix ARG is passed to `chezmoi-write'."
 (define-minor-mode chezmoi-mode
   "Chezmoi mode for source files."
   :group 'chezmoi
+  :lighter " Chezmoi"
   (defvar chezmoi-mode-overwrite-destination) ; silence
   (if chezmoi-mode
       (progn
-	(when (or chezmoi-mode-overwrite-destination (chezmoi-changed-p (buffer-file-name)))
-	  (add-hook 'after-save-hook #'chezmoi-write 0 t))
+	(add-hook 'after-save-hook #'chezmoi--write-after-save 0 t)
 	(chezmoi-template--activate-go-template-mode)
 	(add-hook 'after-change-functions #'chezmoi-template--after-change nil 1)
 	(add-hook 'completion-at-point-functions #'chezmoi-capf nil t)
@@ -417,7 +423,7 @@ Prefix ARG is passed to `chezmoi-write'."
     (progn
       (chezmoi-template-buffer-display nil)
 
-      (remove-hook 'after-save-hook #'chezmoi-write t)
+      (remove-hook 'after-save-hook #'chezmoi--write-after-save t)
       (remove-hook 'after-change-functions #'chezmoi-template--after-change t)
       (remove-hook 'completion-at-point-functions #'chezmoi-capf t)
       (font-lock-ensure (point-min) (point-max)))))

@@ -20,17 +20,29 @@
 (ert-deftest chezmoi-mode-initializes-template-module ()
   (with-temp-buffer
     (setq buffer-file-name "/tmp/chezmoi/run.sh.tmpl")
-    (let ((activated nil))
-      (cl-letf (((symbol-function 'chezmoi-changed-p) (lambda (&rest _) nil))
+    (let ((activated nil)
+          (changed-calls 0))
+      (cl-letf (((symbol-function 'chezmoi-changed-p)
+                 (lambda (&rest _) (cl-incf changed-calls) nil))
                 ((symbol-function 'chezmoi-template--activate-go-template-mode)
                  (lambda () (setq activated t)))
                 ((symbol-function 'chezmoi-template-buffer-display)
                  (lambda (&rest _) nil)))
         (chezmoi-mode 1)
+        (should (= changed-calls 0))
+        (should (memq #'chezmoi--write-after-save after-save-hook))
         (should (memq #'chezmoi-capf completion-at-point-functions))
         (chezmoi-mode -1)
+        (should-not (memq #'chezmoi--write-after-save after-save-hook))
         (should-not (memq #'chezmoi-capf completion-at-point-functions)))
       (should activated))))
+
+(ert-deftest chezmoi-mode-has-lighter ()
+  (should (equal (cdr (assq 'chezmoi-mode minor-mode-alist))
+                 '(" Chezmoi"))))
+
+(ert-deftest chezmoi-template-display-is-enabled-by-default ()
+  (should (default-value 'chezmoi-template-display-p)))
 
 (ert-deftest chezmoi-mode-registers-capf-after-major-mode-change ()
   (with-temp-buffer
@@ -149,6 +161,17 @@
       (should (equal (buffer-substring-no-properties
                       (caar spans) (cdar spans))
                      "{{ .chezmoi.os }}")))))
+
+(ert-deftest chezmoi-template-finds-selector-inside-control-action ()
+  (skip-unless (treesit-ready-p 'gotmpl))
+  (with-temp-buffer
+    (insert "{{ if .enabled }}\n{{ .path.workspace.qmk }}\n{{ end }}\n")
+    (go-template-ts-mode)
+    (let ((spans (chezmoi-template--treesit-expression-spans)))
+      (should (= (length spans) 1))
+      (should (equal (buffer-substring-no-properties
+                      (caar spans) (cdar spans))
+                     "{{ .path.workspace.qmk }}")))))
 
 (ert-deftest chezmoi-template-after-change-is-debounced ()
   (with-temp-buffer
