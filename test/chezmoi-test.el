@@ -79,6 +79,21 @@
                  "/tmp/chezmoi/.chezmoitemplates-old/Brewfile"))
     (should-not (chezmoi-template-file-p "/tmp/chezmoi/run.sh.tmpl.bak"))))
 
+(ert-deftest chezmoi-normalizes-template-host-filename ()
+  (let ((chezmoi-root "/tmp/chezmoi/"))
+    (should (equal
+             (poly-any-template--host-filename
+              "/tmp/chezmoi/dot_zprofile.tmpl")
+             "/tmp/chezmoi/.zprofile"))))
+
+(ert-deftest chezmoi-dot-template-uses-target-host-mode ()
+  (let ((chezmoi-root "/tmp/chezmoi/"))
+    (with-temp-buffer
+      (setq buffer-file-name "/tmp/chezmoi/dot_zprofile.tmpl")
+      (set-auto-mode)
+      (should (eq major-mode 'sh-mode))
+      (should polymode-mode))))
+
 (ert-deftest chezmoi-source-file-p-treats-root-as-a-path ()
   (let* ((root (make-temp-file "chezmoi.root" t))
          (chezmoi-root (file-name-as-directory root))

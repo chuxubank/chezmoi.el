@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.3
+;; Version: 1.4.4
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0")
 ;;                     (transient "0.4.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
@@ -252,7 +252,7 @@ Requires chezmoi to be configured with an external mergetool (emacs, perhaps?)."
       (setq base-name (substring base-name (length attr)))
       (when (string= "dot_" attr) (setq base-name (concat "." base-name))))
 
-    (concat dir "/" base-name)))
+    (expand-file-name base-name dir)))
 
 (defun chezmoi--manual-target-file (source-file)
   "Return the target file corresponding to SOURCE-FILE."

@@ -12,7 +12,8 @@ PACKAGE_SETUP = \
 	--eval "(require 'package)" \
 	--eval "(package-initialize)" \
 	--eval "(setq load-path (cons \"$(CURDIR)\" (delete \"$(CURDIR)\" load-path)))" \
-	--eval "(setq load-path (cons \"$(CURDIR)/test\" (delete \"$(CURDIR)/test\" load-path)))"
+	--eval "(setq load-path (cons \"$(CURDIR)/test\" (delete \"$(CURDIR)/test\" load-path)))" \
+	$(foreach path,$(POLYMODE_PATH) $(POLY_PATH) $(GO_TEMPLATE_PATH),--eval "(setq load-path (cons \"$(path)\" (delete \"$(path)\" load-path)))")
 
 ARCHIVES = \
 	--eval "(require 'package)" \

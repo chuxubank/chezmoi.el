@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.3
+;; Version: 1.4.4
 ;; Package-Requires: ((emacs "29.1") (poly-any-go-template "0.1.0"))
 ;; Homepage: https://github.com/chuxubank/chezmoi.el
 ;; Keywords: vc
@@ -43,7 +43,22 @@
 
 (declare-function chezmoi-template-source-file-p "chezmoi-core" (file))
 (declare-function chezmoi-template-directory-file-p "chezmoi-core" (file))
+(declare-function chezmoi--unchezmoi-source-file-name "chezmoi" (source-file))
 (declare-function chezmoi-get-data "chezmoi" ())
+
+(defun chezmoi-template--normalize-host-filename (filename)
+  "Translate chezmoi source attributes in host FILENAME."
+  (if (and filename chezmoi-root
+           (file-in-directory-p filename chezmoi-root))
+      (chezmoi--unchezmoi-source-file-name filename)
+    filename))
+
+(add-hook 'poly-any-template-host-filename-functions
+          #'chezmoi-template--normalize-host-filename)
+
+(add-to-list 'auto-mode-alist
+             '("/dot_[^/]+\\.\\(?:gotmpl\\|tmpl\\)\\'"
+               . poly-any-go-template-mode))
 
 (defun chezmoi-template--filename-has-host-mode-p (file)
   "Return non-nil when FILE names a host language after removing `.tmpl'."
