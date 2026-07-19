@@ -211,6 +211,34 @@
             (should (timerp chezmoi-template--display-timer)))
         (chezmoi-template--cancel-display-timer)))))
 
+(ert-deftest chezmoi-mode-schedules-initial-template-display ()
+  (with-temp-buffer
+    (setq buffer-file-name "/tmp/chezmoi/run.sh.tmpl")
+    (let ((chezmoi-template-display-delay 10))
+      (unwind-protect
+          (cl-letf (((symbol-function 'chezmoi-template--activate-go-template-mode)
+                     #'ignore))
+            (chezmoi-mode 1)
+            (should (timerp chezmoi-template--display-timer))
+            (chezmoi-mode -1)
+            (should-not chezmoi-template--display-timer))
+        (chezmoi-template--cancel-display-timer)))))
+
+(ert-deftest chezmoi-mode-does-not-force-full-buffer-fontification ()
+  (with-temp-buffer
+    (setq buffer-file-name "/tmp/chezmoi/run.sh.tmpl")
+    (let ((chezmoi-template-display-delay 10)
+          (font-lock-calls 0))
+      (unwind-protect
+          (cl-letf (((symbol-function 'chezmoi-template--activate-go-template-mode)
+                     #'ignore)
+                    ((symbol-function 'font-lock-ensure)
+                     (lambda (&rest _) (cl-incf font-lock-calls))))
+            (chezmoi-mode 1)
+            (chezmoi-mode -1)
+            (should (= font-lock-calls 0)))
+        (chezmoi-template--cancel-display-timer)))))
+
 (ert-deftest chezmoi-capf-completes-the-final-selector-segment ()
   (skip-unless (treesit-ready-p 'gotmpl))
   (with-temp-buffer

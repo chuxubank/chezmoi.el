@@ -46,6 +46,8 @@
 (declare-function chezmoi--unchezmoi-source-file-name "chezmoi" (source-file))
 (declare-function chezmoi-get-data "chezmoi" ())
 
+(defvar chezmoi-mode)
+
 (defun chezmoi-template--normalize-host-filename (filename)
   "Translate chezmoi source attributes in host FILENAME."
   (if (and filename chezmoi-root
@@ -320,6 +322,22 @@ START is passed to `chezmoi-template--funcall-over-display-properties'."
   (when (timerp chezmoi-template--display-timer)
     (cancel-timer chezmoi-template--display-timer))
   (setq chezmoi-template--display-timer nil))
+
+(defun chezmoi-template--display-after-idle (buffer)
+  "Display templates in BUFFER after an idle delay."
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (setq chezmoi-template--display-timer nil)
+      (when (and chezmoi-mode chezmoi-template-display-p)
+        (chezmoi-template-buffer-display t)))))
+
+(defun chezmoi-template-schedule-buffer-display ()
+  "Schedule initial template display for the current buffer."
+  (chezmoi-template--cancel-display-timer)
+  (setq chezmoi-template--display-timer
+        (run-with-idle-timer chezmoi-template-display-delay nil
+                             #'chezmoi-template--display-after-idle
+                             (current-buffer))))
 
 (defun chezmoi-template--refresh-after-change (buffer)
   "Refresh displayed templates in BUFFER after an idle delay."

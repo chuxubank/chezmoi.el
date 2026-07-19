@@ -49,6 +49,7 @@
 (declare-function chezmoi-template--activate-go-template-mode "chezmoi-template" ())
 (declare-function chezmoi-template--after-change "chezmoi-template" (&rest _))
 (declare-function chezmoi-template-buffer-display "chezmoi-template" (&optional display-p start buffer-or-name))
+(declare-function chezmoi-template-schedule-buffer-display "chezmoi-template" ())
 (declare-function chezmoi-template-source-file-p "chezmoi-core" (file))
 (declare-function chezmoi-capf "chezmoi-template" ())
 
@@ -418,15 +419,13 @@ Prefix ARG is passed to `chezmoi-write'."
 	(chezmoi-template--activate-go-template-mode)
 	(add-hook 'after-change-functions #'chezmoi-template--after-change nil 1)
 	(add-hook 'completion-at-point-functions #'chezmoi-capf nil t)
-	(chezmoi-template-buffer-display t)
-	(font-lock-ensure (point-min) (point-max)))
+	(chezmoi-template-schedule-buffer-display))
     (progn
       (chezmoi-template-buffer-display nil)
 
       (remove-hook 'after-save-hook #'chezmoi--write-after-save t)
       (remove-hook 'after-change-functions #'chezmoi-template--after-change t)
-      (remove-hook 'completion-at-point-functions #'chezmoi-capf t)
-      (font-lock-ensure (point-min) (point-max)))))
+      (remove-hook 'completion-at-point-functions #'chezmoi-capf t))))
 
 (provide 'chezmoi)
 
