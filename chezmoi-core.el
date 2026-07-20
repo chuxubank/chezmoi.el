@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.6
+;; Version: 1.4.8
 ;; Package-Requires: ((emacs "29.1"))
 ;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
@@ -146,6 +146,7 @@ When nil, Chezmoi is unavailable or has not reported a source directory."
                (file-name-split
                 (file-name-directory (expand-file-name file))))))
 
+;;;###autoload
 (defun chezmoi-template-source-file-p (file)
   "Return non-nil when FILE contains a Go template.
 Chezmoi marks templates with a `.tmpl' suffix or a `modify_' prefix.

@@ -2,7 +2,7 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.6
+;; Version: 1.4.8
 ;; Package-Requires: ((emacs "29.1"))
 ;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
@@ -41,7 +41,7 @@
 (require 'treesit)
 
 (declare-function chezmoi-template-source-file-p "chezmoi-core" (file))
-(declare-function chezmoi-get-data "chezmoi" ())
+(declare-function chezmoi-get-data "chezmoi-mode" ())
 (declare-function pm-map-over-spans
                   "polymode-core"
                   (function &optional beg end count backwardp visibly no-cache))
@@ -53,6 +53,7 @@
 The hook runs before completion and template display are initialized.  It may
 select a suitable major mode for the template source file.")
 
+;;;###autoload
 (defun chezmoi-template-normalize-host-filename (filename)
   "Translate chezmoi source attributes in host FILENAME."
   (if (and filename chezmoi-root
