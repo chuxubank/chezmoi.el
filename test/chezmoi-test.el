@@ -41,6 +41,76 @@
 (ert-deftest chezmoi-transient-is-command ()
   (should (commandp #'chezmoi-transient)))
 
+(ert-deftest chezmoi-transient-exposes-core-workflows ()
+  (dolist (key '("f" "F" "o" "r"
+                 "-f" "w" "s" "d" "S"
+                 "m" "M" "q"
+                 "D" "C" "x" "v" "t" "c"))
+    (should (transient-get-suffix 'chezmoi-transient key))))
+
+(ert-deftest chezmoi-transient-version-suffix-is-a-command ()
+  (should (commandp #'chezmoi-version)))
+
+(ert-deftest chezmoi-transient-write-passes-force-argument ()
+  (with-temp-buffer
+    (setq buffer-file-name "/tmp/chezmoi/dot_config")
+    (let (write-args)
+      (cl-letf (((symbol-function 'transient-args)
+                 (lambda (_) '("--force")))
+                ((symbol-function 'chezmoi-write)
+                 (lambda (&rest args) (setq write-args args))))
+        (call-interactively #'chezmoi-transient-write))
+      (should (equal write-args
+                     '("/tmp/chezmoi/dot_config" ("--force")))))))
+
+(ert-deftest chezmoi-transient-sync-passes-force-prefix ()
+  (let (received-prefix)
+    (cl-letf (((symbol-function 'transient-args)
+               (lambda (_) '("--force")))
+              ((symbol-function 'chezmoi-sync-files)
+               (lambda ()
+                 (interactive)
+                 (setq received-prefix current-prefix-arg))))
+      (call-interactively #'chezmoi-transient-sync-files))
+    (should (equal received-prefix '(4)))))
+
+(ert-deftest chezmoi-transient-descriptions-reflect-buffer-state ()
+  (let ((chezmoi-mode nil))
+    (should (equal (chezmoi-transient--mode-description)
+                   "Enable Chezmoi mode"))
+    (setq chezmoi-mode t)
+    (should (equal (chezmoi-transient--mode-description)
+                   "Disable Chezmoi mode")))
+  (with-temp-buffer
+    (should (equal (chezmoi-transient--display-description)
+                   "Display template values"))
+    (setq chezmoi-template--buffer-displayed-p t)
+    (should (equal (chezmoi-transient--display-description)
+                   "Hide template values"))))
+
+(ert-deftest chezmoi-display-command-output-preserves-argument-boundaries ()
+  (let ((buffer-name "*chezmoi-test-output*")
+        process-args
+        displayed)
+    (unwind-protect
+        (cl-letf (((symbol-function 'call-process)
+                   (lambda (_program _in destination _display &rest args)
+                     (setq process-args args)
+                     (with-current-buffer destination
+                       (insert "{}"))
+                     0))
+                  ((symbol-function 'display-buffer)
+                   (lambda (buffer &rest _)
+                     (setq displayed buffer))))
+          (let ((buffer (chezmoi--display-command-output
+                         buffer-name '("dump-config") t)))
+            (should (eq buffer displayed))
+            (should (equal process-args '("dump-config")))
+            (with-current-buffer buffer
+              (should buffer-read-only))))
+      (when-let ((buffer (get-buffer buffer-name)))
+        (kill-buffer buffer)))))
+
 (ert-deftest chezmoi-mode-initializes-template-module ()
   (with-temp-buffer
     (setq buffer-file-name "/tmp/chezmoi/run.sh.tmpl")

@@ -39,9 +39,15 @@
 (require 'chezmoi-template)
 (require 'cl-lib)
 (require 'custom)
+(require 'json)
 (require 'shell)
 (require 'subr-x)
 (require 'transient)
+
+(autoload 'chezmoi-dired-add-marked-files "chezmoi-dired" nil t)
+(autoload 'chezmoi-ediff "chezmoi-ediff" nil t)
+(autoload 'chezmoi-ediff-merge "chezmoi-ediff" nil t)
+(autoload 'chezmoi-magit-status "chezmoi-magit" nil t)
 
 (defvar chezmoi-mode nil)
 
@@ -71,6 +77,61 @@ Return nil when the command exits unsuccessfully or reports an error."
                                result))
             result))))))
 
+(defun chezmoi--display-command-output (buffer-name args &optional json-p)
+  "Run Chezmoi with ARGS and display its output in BUFFER-NAME.
+Pretty-print the output first when JSON-P is non-nil."
+  (let ((buffer (get-buffer-create buffer-name))
+        status)
+    (with-current-buffer buffer
+      (let ((inhibit-read-only t))
+        (erase-buffer)
+        (setq status
+              (chezmoi--locally
+               (apply #'call-process chezmoi-command nil buffer nil args)))
+        (goto-char (point-min))
+        (when (and json-p (not (eobp)))
+          (condition-case nil
+              (json-pretty-print-buffer)
+            (json-error nil)))
+        (special-mode)))
+    (display-buffer buffer)
+    (unless (zerop status)
+      (user-error "Chezmoi command failed: %s" (string-join args " ")))
+    buffer))
+
+;;;###autoload
+(defun chezmoi-status ()
+  "Display the status of managed files."
+  (interactive)
+  (chezmoi--display-command-output "*chezmoi-status*" '("status")))
+
+;;;###autoload
+(defun chezmoi-show-data ()
+  "Display Chezmoi template data as formatted JSON."
+  (interactive)
+  (chezmoi--display-command-output "*chezmoi-data*" '("data") t))
+
+;;;###autoload
+(defun chezmoi-show-config ()
+  "Display the effective Chezmoi configuration as formatted JSON."
+  (interactive)
+  (chezmoi--display-command-output
+   "*chezmoi-config*" '("dump-config") t))
+
+;;;###autoload
+(defun chezmoi-doctor ()
+  "Run `chezmoi doctor' and display its report."
+  (interactive)
+  (chezmoi--display-command-output "*chezmoi-doctor*" '("doctor")))
+
+;;;###autoload
+(defun chezmoi-open-source-directory ()
+  "Open the Chezmoi source directory in Dired."
+  (interactive)
+  (if chezmoi-root
+      (dired chezmoi-root)
+    (user-error "Chezmoi source directory is unavailable")))
+
 (defun chezmoi-managed ()
   "List all files and directories managed by chezmoi."
   (thread-last '("managed" "-x" "externals,scripts" "-p" "absolute")
@@ -95,25 +156,83 @@ Return nil when the command exits unsuccessfully or reports an error."
           'project-file)))
   (find-file script))
 
+(defun chezmoi-transient--current-file-p ()
+  "Return non-nil when the current buffer visits a file."
+  buffer-file-name)
+
+(defun chezmoi-transient--mode-description ()
+  "Return a state-aware description for `chezmoi-mode'."
+  (if chezmoi-mode "Disable Chezmoi mode" "Enable Chezmoi mode"))
+
+(defun chezmoi-transient--display-description ()
+  "Return a state-aware description for template display."
+  (if (bound-and-true-p chezmoi-template--buffer-displayed-p)
+      "Hide template values"
+    "Display template values"))
+
+(defun chezmoi-transient--extension-available-p (library)
+  "Return non-nil when extension LIBRARY can be loaded."
+  (locate-library library))
+
+(transient-define-suffix chezmoi-transient-write ()
+  "Write the current file, honoring the transient force argument."
+  (interactive)
+  (chezmoi-write buffer-file-name
+                 (member "--force" (transient-args 'chezmoi-transient))))
+
+(transient-define-suffix chezmoi-transient-sync-files ()
+  "Sync changed files, honoring the transient force argument."
+  (interactive)
+  (let ((current-prefix-arg
+         (and (member "--force" (transient-args 'chezmoi-transient))
+              '(4))))
+    (call-interactively #'chezmoi-sync-files)))
+
 ;;;###autoload
 (transient-define-prefix chezmoi-transient ()
   "Manage Chezmoi source and target files."
-  [
-   ["Files"
-    ("f" "Find" chezmoi-find)
+  [["Files"
+    ("f" "Find managed file" chezmoi-find)
     ("F" "Find script" chezmoi-find-scripts)
-    ("o" "Open other" chezmoi-open-other)]
-   ["Sync"
-    ("w" "Write" chezmoi-write)
-    ("s" "Sync files" chezmoi-sync-files)
-    ("d" "Diff" chezmoi-diff)]
-   ["Merge"
-    ("m" "Merge" chezmoi-merge)
-    ("M" "Merge all" chezmoi-merge-all)
-    ("q" "Quit merges" chezmoi-merge-quit)]
-   ["Template"
-    ("t" "Toggle display" chezmoi-template-buffer-display)
-    ("c" "Toggle mode" chezmoi-mode)]])
+    ("o" "Open source/target" chezmoi-open-other
+     :inapt-if-not chezmoi-transient--current-file-p)
+    ("r" "Open source directory" chezmoi-open-source-directory)]
+   ["Changes"
+    ("-f" "Force apply/save" "--force")
+    ("w" "Write current file" chezmoi-transient-write
+     :inapt-if-not chezmoi-transient--current-file-p)
+    ("s" "Sync changed files" chezmoi-transient-sync-files)
+    ("d" "Show diff" chezmoi-diff)
+    ("S" "Show status" chezmoi-status)]
+   ["Resolve"
+    ("e" "Ediff source/target" chezmoi-ediff
+     :if (lambda ()
+           (chezmoi-transient--extension-available-p "chezmoi-ediff")))
+    ("E" "Ediff with ancestor" chezmoi-ediff-merge
+     :if (lambda ()
+           (chezmoi-transient--extension-available-p "chezmoi-ediff")))
+    ("m" "Run merge" chezmoi-merge)
+    ("M" "Run merge-all" chezmoi-merge-all)
+    ("q" "Stop merge processes" chezmoi-merge-quit)]]
+  [["Inspect"
+    ("D" "Show template data" chezmoi-show-data)
+    ("C" "Show configuration" chezmoi-show-config)
+    ("x" "Run doctor" chezmoi-doctor)
+    ("v" "Show version" chezmoi-version)]
+   ["Current buffer"
+    ("t" chezmoi-transient--display-description
+     chezmoi-template-buffer-display :inapt-if-not chezmoi-mode)
+    ("c" chezmoi-transient--mode-description chezmoi-mode
+     :inapt-if-not chezmoi-transient--current-file-p)]
+   ["Integrations"
+    ("g" "Magit source repository" chezmoi-magit-status
+     :if (lambda ()
+           (chezmoi-transient--extension-available-p "chezmoi-magit")))
+    ("a" "Add Dired marked files" chezmoi-dired-add-marked-files
+     :if (lambda ()
+           (and (derived-mode-p 'dired-mode)
+                (chezmoi-transient--extension-available-p
+                 "chezmoi-dired"))))]])
 
 (defun chezmoi-target-file-p (file)
   "Return non-nil if FILE is in the target state."
@@ -209,13 +328,19 @@ Requires chezmoi to be configured with an external mergetool (emacs, perhaps?)."
 
 (defun chezmoi-version ()
   "Get version number of chezmoi."
+  (interactive)
   (let* ((s (cl-first (chezmoi--dispatch '("--version"))))
 	 (dev-re "\\(version \\(dev\\)\\)")
 	 (v-re " \\(v\\(\\([0-9]+\\.\\)?\\([0-9]+\\.\\)?\\(\\*\\|[0-9]+\\)\\)\\)")
-	 (re (concat dev-re "\\|" v-re)))
-    (when (and s (string-match re s))
-      (or (match-string 4 s)
-	  (match-string 2 s)))))
+	 (re (concat dev-re "\\|" v-re))
+         (version (when (and s (string-match re s))
+                    (or (match-string 4 s)
+	                (match-string 2 s)))))
+    (when (called-interactively-p 'interactive)
+      (if version
+          (message "Chezmoi %s" version)
+        (user-error "Unable to determine Chezmoi version")))
+    version))
 
 (defun chezmoi-get-data ()
   "Return chezmoi data."

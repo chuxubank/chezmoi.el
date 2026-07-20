@@ -58,6 +58,19 @@ make compile-extensions
 
   Quickly jump to the corresponding target file or source file using ~chezmoi-open-other~.
 
+** Transient
+
+   ~M-x chezmoi-transient~ is the main entry point for common workflows.  It
+   groups commands for finding managed files and scripts, applying or syncing
+   changes, inspecting status/data/configuration, resolving conflicts, and
+   controlling the current Chezmoi buffer.  Enable the ~-f~ infix to force an
+   apply from a source file or save an updated source buffer while syncing.
+
+   Ediff and Magit entries appear when their Chezmoi extension libraries are
+   available.  The Dired add command appears only in Dired buffers.  These
+   entries do not make the optional integrations dependencies of the main
+   package.
+
 * Functions
 
   Some functions provided are direct equivalents to common emacs functions.
