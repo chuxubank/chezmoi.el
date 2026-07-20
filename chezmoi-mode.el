@@ -1,10 +1,10 @@
-;;; chezmoi.el --- A package for interacting with chezmoi -*- lexical-binding: t -*-
+;;; chezmoi-mode.el --- Interact with chezmoi from Emacs -*- lexical-binding: t -*-
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.6
+;; Version: 1.4.7
 ;; Package-Requires: ((emacs "29.1") (transient "0.4.0"))
-;; Homepage: https://github.com/chuxubank/chezmoi.el
+;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
 
 
@@ -232,9 +232,11 @@ SOURCE-FILE itself."
     ("x" "Run doctor" chezmoi-doctor)
     ("v" "Show version" chezmoi-version)]
    ["Current buffer"
-    ("t" chezmoi-transient--display-description
-     chezmoi-template-buffer-display :inapt-if-not chezmoi-mode)
-    ("c" chezmoi-transient--mode-description chezmoi-mode
+    ("t" "Toggle template values" chezmoi-template-buffer-display
+     :description chezmoi-transient--display-description
+     :inapt-if-not chezmoi-mode)
+    ("c" "Toggle Chezmoi mode" chezmoi-mode
+     :description chezmoi-transient--mode-description
      :inapt-if-not chezmoi-transient--current-file-p)]
    ["Integrations"
     ("g" "Magit source repository" chezmoi-magit-status
@@ -503,7 +505,7 @@ Prefix ARG is passed to `chezmoi-write'."
 ;;;###autoload
 (define-minor-mode chezmoi-mode
   "Chezmoi mode for source files."
-  :group 'chezmoi
+  :group 'chezmoi-mode-settings
   :lighter " Chezmoi"
   (defvar chezmoi-mode-overwrite-destination) ; silence
   (if chezmoi-mode
@@ -519,11 +521,10 @@ Prefix ARG is passed to `chezmoi-write'."
 	(chezmoi-template-schedule-buffer-display))
     (progn
       (chezmoi-template-buffer-display nil)
-
       (remove-hook 'after-save-hook #'chezmoi--write-after-save t)
       (remove-hook 'after-change-functions #'chezmoi-template--after-change t)
       (remove-hook 'completion-at-point-functions #'chezmoi-capf t))))
 
-(provide 'chezmoi)
+(provide 'chezmoi-mode)
 
-;;; chezmoi.el ends here
+;;; chezmoi-mode.el ends here

@@ -4,7 +4,7 @@
 ;; Maintainer: Harrison Pielke-Lombardo
 ;; Version: 1.4.6
 ;; Package-Requires: ((emacs "29.1"))
-;; Homepage: https://github.com/chuxubank/chezmoi.el
+;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
 
 
@@ -39,22 +39,22 @@
 (require 'cl-lib)
 (require 'subr-x)
 
-(defgroup chezmoi nil
+(defgroup chezmoi-mode-settings nil
   "Customization group for `chezmoi-mode'."
-  :group 'chezmoi)
+  :group 'tools)
 
 (defvar chezmoi-mode nil)
-(declare-function chezmoi-mode "chezmoi" ())
+(declare-function chezmoi-mode "chezmoi-mode" ())
 
 (defcustom chezmoi-command "chezmoi"
   "The location of the chezmoi command."
   :type '(string)
-  :group 'chezmoi)
+  :group 'chezmoi-mode-settings)
 
 (defcustom chezmoi-mode-overwrite-destination nil
   "Always attach a hook to write to the target file to chezmoi buffers.
 If the target has been changed, it will be overwritten."
-  :group 'chezmoi
+  :group 'chezmoi-mode-settings
   :type '(boolean))
 
 (defun chezmoi--default-root ()
@@ -69,12 +69,12 @@ If the target has been changed, it will be overwritten."
 (defcustom chezmoi-root (chezmoi--default-root)
   "The source directory for chezmoi.
 When nil, Chezmoi is unavailable or has not reported a source directory."
-  :group 'chezmoi
+  :group 'chezmoi-mode-settings
   :type '(choice (const :tag "Auto/unavailable" nil) directory))
 
 (defcustom chezmoi-auto-enable-mode t
   "Whether visiting files below `chezmoi-root' enables `chezmoi-mode'."
-  :group 'chezmoi
+  :group 'chezmoi-mode-settings
   :type 'boolean)
 
 (defvar chezmoi-command-error-regex "chezmoi:"

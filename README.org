@@ -1,8 +1,8 @@
-#+title: chezmoi.el
+#+title: chezmoi-mode
 
 This package provides convenience functions for interacting with the [[https://chezmoi.io/][chezmoi]] dotfile management system via Emacs. These are mostly equivalents to functions like ~find-file~ and ~save-buffer~.
 
-[[https://melpa.org/#/chezmoi][file:https://melpa.org/packages/chezmoi-badge.svg]]
+[[https://melpa.org/#/chezmoi-mode][file:https://melpa.org/packages/chezmoi-mode-badge.svg]]
 
 [[file:resources/chezmoi-template-recording.gif]]
 
@@ -20,7 +20,7 @@ The recording above demonstrates editing a chezmoi template with source file on 
   source attributes for integrations that infer a host mode from a filename.
 
   #+begin_src emacs-lisp :noweb yes
-(use-package chezmoi)
+(use-package chezmoi-mode)
   #+end_src
 
   Files below ~chezmoi-root~ enable ~chezmoi-mode~ when visited. Set
@@ -78,7 +78,7 @@ make compile-extensions
 
   Some functions provided are direct equivalents to common emacs functions.
 
-  | Function     | chezmoi equivalent | chezmoi.el                 |
+  | Function     | chezmoi equivalent | chezmoi-mode               |
   |--------------+--------------------+----------------------------|
   | find-file    | chezmoi edit       | ~chezmoi\vertfind~         |
   | save-buffer  | chezmoi apply      | ~chezmoi\vertwrite~        |
@@ -88,7 +88,7 @@ make compile-extensions
 
 * Templates
 
-  Chezmoi.el provides a minor mode for displaying the values of [[https://www.chezmoi.io/user-guide/templating/][chezmoi template]] strings as overlays in source file buffers. You can toggle their display with ~M-x chezmoi-template-buffer-display~ or with a configuration variable:
+  chezmoi-mode provides a minor mode for displaying the values of [[https://www.chezmoi.io/user-guide/templating/][chezmoi template]] strings as overlays in source file buffers. You can toggle their display with ~M-x chezmoi-template-buffer-display~ or with a configuration variable:
 
   #+begin_src emacs-lisp :noweb yes
 (setq-default chezmoi-template-display-p t)   ;; Display template values in all source buffers.
@@ -174,12 +174,12 @@ make compile-extensions
    #+begin_src emacs-lisp :noweb yes :results silent
 (defconst chezmoi-packages
   '(
-    chezmoi)
+    chezmoi-mode)
   "The list of Lisp packages required by the chezmoi layer.")
 
 
-(defun chezmoi/init-chezmoi ()
-  (use-package chezmoi
+(defun chezmoi/init-chezmoi-mode ()
+  (use-package chezmoi-mode
     :init
     (spacemacs/declare-prefix "f d" "chezmoi")
 

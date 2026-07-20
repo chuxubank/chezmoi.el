@@ -4,12 +4,16 @@
 
 (require 'cl-lib)
 (require 'ert)
-(require 'chezmoi)
+(require 'chezmoi-mode)
 
 (defconst chezmoi-test--loaded-go-template-ts-mode-p
   (featurep 'go-template-ts-mode))
 
 (require 'go-template-ts-mode nil t)
+
+(ert-deftest chezmoi-mode-provides-renamed-feature ()
+  (should (featurep 'chezmoi-mode))
+  (should-not (featurep 'chezmoi)))
 
 (ert-deftest chezmoi-does-not-load-poly-any-go-template ()
   (should-not (featurep 'poly-any-go-template)))

@@ -2,9 +2,9 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.4
-;; Package-Requires: ((emacs "29.1") (chezmoi "1.4.4"))
-;; Homepage: https://github.com/chuxubank/chezmoi.el
+;; Version: 1.4.5
+;; Package-Requires: ((emacs "29.1") (chezmoi-mode "1.4.7"))
+;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
 
 
@@ -30,20 +30,20 @@
 
 ;;; Code:
 
-(require 'chezmoi)
+(require 'chezmoi-mode)
 (require 'ediff)
 
 (defcustom chezmoi-ediff-force-overwrite t
   "Whether to force file overwrite when ediff finishes with identical buffers."
   :type '(boolean)
-  :group 'chezmoi)
+  :group 'chezmoi-mode-settings)
 
 (defcustom chezmoi-ediff-template-use-ediff3 t
   "If `chezmoi-ediff' between template files should .
 This creates false diffs for every template element, but allows easily
 changing the source template file."
   :type '(boolean)
-  :group 'chezmoi)
+  :group 'chezmoi-mode-settings)
 
 (defvar-local chezmoi-ediff--source-file nil
   "Current ediff source-file.")

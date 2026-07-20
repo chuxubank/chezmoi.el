@@ -1,7 +1,7 @@
 EMACS ?= emacs
 TEST_GO_TEMPLATE_PATH ?=
 LOAD_PATH = -L . -L extensions -L test $(foreach path,$(TEST_GO_TEMPLATE_PATH),-L $(path))
-SOURCES = chezmoi-core.el chezmoi-template.el chezmoi.el
+SOURCES = chezmoi-core.el chezmoi-template.el chezmoi-mode.el
 EXTENSIONS = extensions/chezmoi-age.el extensions/chezmoi-dired.el \
 	extensions/chezmoi-ediff.el
 OPTIONAL_EXTENSIONS = extensions/chezmoi-magit.el

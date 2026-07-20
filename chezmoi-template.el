@@ -4,7 +4,7 @@
 ;; Maintainer: Harrison Pielke-Lombardo
 ;; Version: 1.4.6
 ;; Package-Requires: ((emacs "29.1"))
-;; Homepage: https://github.com/chuxubank/chezmoi.el
+;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
 
 
@@ -63,13 +63,13 @@ select a suitable major mode for the template source file.")
 (defcustom chezmoi-template-display-p t
   "Whether to display templates."
   :type '(boolean)
-  :group 'chezmoi
+  :group 'chezmoi-mode-settings
   :local t)
 
 (defcustom chezmoi-template-display-delay 0.2
   "Idle delay before refreshing displayed template values after a change."
   :type '(number)
-  :group 'chezmoi)
+  :group 'chezmoi-mode-settings)
 
 (defvar-local chezmoi-template--buffer-displayed-p nil
   "Whether all templates are currently displayed in buffer.")

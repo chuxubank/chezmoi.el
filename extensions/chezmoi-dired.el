@@ -2,9 +2,9 @@
 
 ;; Author: Harrison Pielke-Lombardo
 ;; Maintainer: Harrison Pielke-Lombardo
-;; Version: 1.4.4
-;; Package-Requires: ((emacs "29.1") (chezmoi "1.4.4"))
-;; Homepage: https://github.com/chuxubank/chezmoi.el
+;; Version: 1.4.5
+;; Package-Requires: ((emacs "29.1") (chezmoi-mode "1.4.7"))
+;; Homepage: https://github.com/chuxubank/chezmoi-mode
 ;; Keywords: vc
 
 
@@ -31,7 +31,7 @@
 ;;; Code:
 
 (require 'dired)
-(require 'chezmoi)
+(require 'chezmoi-mode)
 
 ;;;###autoload
 (defun chezmoi-dired-add-marked-files ()
