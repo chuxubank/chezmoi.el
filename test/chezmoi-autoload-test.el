@@ -12,7 +12,8 @@
 (defconst chezmoi-autoload-test--source-directory
   (file-name-directory
    (directory-file-name
-    (file-name-directory (or load-file-name buffer-file-name))))
+    (file-name-directory
+     (expand-file-name (or load-file-name buffer-file-name)))))
   "Directory containing the chezmoi-mode sources under test.")
 
 (ert-deftest chezmoi-autoload-enables-mode-for-direct-source-visits ()
@@ -20,7 +21,11 @@
   (should-not (featurep 'chezmoi-core))
   (let* ((root (make-temp-file "chezmoi-autoload-root" t))
          (source-file (expand-file-name "dot_config" root))
-         (autoload-file (make-temp-file "chezmoi-mode-autoloads" nil ".el"))
+         (autoload-file
+          (make-temp-file
+           (expand-file-name ".chezmoi-mode-autoloads-"
+                             chezmoi-autoload-test--source-directory)
+           nil ".el"))
          (find-file-hook (remove #'chezmoi--mode-from-path find-file-hook))
          (chezmoi-root (file-name-as-directory root))
          (chezmoi-auto-enable-mode t)

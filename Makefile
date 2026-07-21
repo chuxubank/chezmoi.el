@@ -16,6 +16,10 @@ SOURCES = chezmoi-core.el chezmoi-template.el chezmoi-mode.el \
 	chezmoi-dired.el chezmoi-ediff.el chezmoi-magit.el \
 	chezmoi-transient.el
 AGE_SOURCE = extensions/chezmoi-age/chezmoi-age.el
+UNIT_TESTS = core mode template ediff transient
+UNIT_TEST_LOADS = $(foreach test,$(UNIT_TESTS),-l chezmoi-$(test)-test)
+INTEGRATION_TESTS = core mode template host-mode transient
+INTEGRATION_TEST_LOADS = $(foreach test,$(INTEGRATION_TESTS),-l chezmoi-$(test)-test)
 
 DEPENDENCY_SETUP = \
 	--eval "(setq user-emacs-directory (file-name-as-directory \"$(abspath $(TEST_DEPS_DIR))\"))" \
@@ -39,7 +43,7 @@ ARCHIVES = $(DEPENDENCY_SETUP) \
 
 .PHONY: all install-deps install-poly-test-dep install-test-deps \
 	check-test-deps compile compile-age test test-autoload test-core test-mode \
-	test-template test-ediff test-transient test-integration clean
+	test-template test-ediff test-transient test-unit test-integration clean
 
 all: compile test
 
@@ -88,43 +92,23 @@ test-autoload:
 		-l chezmoi-autoload-test \
 		--eval "(ert-run-tests-batch-and-exit)"
 
-test-core:
+test-unit:
 	$(EMACS) -Q --batch $(LOAD_PATH) $(PACKAGE_SETUP) \
-		-l chezmoi-core-test \
+		$(UNIT_TEST_LOADS) \
 		--eval "(ert-run-tests-batch-and-exit '(not (tag integration)))"
 
-test-mode:
+test-core test-mode test-template test-ediff test-transient: test-%:
 	$(EMACS) -Q --batch $(LOAD_PATH) $(PACKAGE_SETUP) \
-		-l chezmoi-mode-test \
-		--eval "(ert-run-tests-batch-and-exit '(not (tag integration)))"
-
-test-template:
-	$(EMACS) -Q --batch $(LOAD_PATH) $(PACKAGE_SETUP) \
-		-l chezmoi-template-test \
-		--eval "(ert-run-tests-batch-and-exit '(not (tag integration)))"
-
-test-ediff:
-	$(EMACS) -Q --batch $(LOAD_PATH) $(PACKAGE_SETUP) \
-		-l chezmoi-ediff-test \
-		--eval "(ert-run-tests-batch-and-exit '(not (tag integration)))"
-
-test-transient:
-	$(EMACS) -Q --batch $(LOAD_PATH) $(PACKAGE_SETUP) \
-		-l chezmoi-transient-test \
+		-l chezmoi-$*-test \
 		--eval "(ert-run-tests-batch-and-exit '(not (tag integration)))"
 
 test-integration: check-test-deps
 	CHEZMOI_TEST_INTEGRATION=1 \
 	$(EMACS) -Q --batch $(TEST_LOAD_PATH) $(TEST_PACKAGE_SETUP) \
-		-l chezmoi-core-test \
-		-l chezmoi-mode-test \
-		-l chezmoi-template-test \
-		-l chezmoi-host-mode-test \
-		-l chezmoi-transient-test \
+		$(INTEGRATION_TEST_LOADS) \
 		--eval "(ert-run-tests-batch-and-exit '(tag integration))"
 
-test: test-autoload test-core test-mode test-template test-ediff \
-	test-transient test-integration
+test: test-autoload test-unit test-integration
 
 clean:
 	find . -path './$(TEST_DEPS_DIR)' -prune -o -name '*.elc' -exec rm -f {} +
