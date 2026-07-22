@@ -37,7 +37,8 @@ The recording above demonstrates editing a chezmoi template with source file on 
   ~chezmoi-template-normalize-host-filename~ function translates Chezmoi
   source attributes for integrations that infer a host mode from a filename.
 
-  Files below ~chezmoi-root~ enable ~chezmoi-mode~ when visited. Set
+  Files below ~chezmoi-root~ enable ~chezmoi-mode~ when visited, except for
+  Chezmoi data files below ~.chezmoidata/~ or named ~.chezmoidata.*~. Set
   ~chezmoi-auto-enable-mode~ to nil to disable this behavior.
 
   Template values are displayed by default. Customize

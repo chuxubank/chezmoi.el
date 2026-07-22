@@ -16,11 +16,13 @@
      (expand-file-name (or load-file-name buffer-file-name)))))
   "Directory containing the chezmoi-mode sources under test.")
 
-(ert-deftest chezmoi-autoload-enables-mode-for-direct-source-visits ()
-  "Loading only generated autoloads should initialize path-based activation."
+(ert-deftest chezmoi-autoload-configures-path-based-mode-activation ()
+  "Generated autoloads should enable Chezmoi only for target-state sources."
   (should-not (featurep 'chezmoi-core))
   (let* ((root (make-temp-file "chezmoi-autoload-root" t))
          (source-file (expand-file-name "dot_config" root))
+         (data-file (expand-file-name
+                     ".chezmoidata/packages/emacs.toml" root))
          (autoload-file
           (make-temp-file
            (expand-file-name ".chezmoi-mode-autoloads-"
@@ -29,7 +31,7 @@
          (find-file-hook (remove #'chezmoi--mode-from-path find-file-hook))
          (chezmoi-root (file-name-as-directory root))
          (chezmoi-auto-enable-mode t)
-         buffer)
+         buffers)
     (unwind-protect
         (progn
           (loaddefs-generate chezmoi-autoload-test--source-directory
@@ -47,13 +49,19 @@
           (should-not (featurep 'chezmoi-age))
           (should (memq #'chezmoi--mode-from-path find-file-hook))
           (with-temp-file source-file)
-          (setq buffer (find-file-noselect source-file))
+          (make-directory (file-name-directory data-file) t)
+          (with-temp-file data-file)
+          (dolist (case `((,source-file . t)
+                          (,data-file . nil)))
+            (let ((buffer (find-file-noselect (car case))))
+              (push buffer buffers)
+              (with-current-buffer buffer
+                (should (eq (and chezmoi-mode t) (cdr case)))))))
+      (dolist (buffer buffers)
+        (when (buffer-live-p buffer)
           (with-current-buffer buffer
-            (should chezmoi-mode)))
-      (when (buffer-live-p buffer)
-        (with-current-buffer buffer
-          (set-buffer-modified-p nil))
-        (kill-buffer buffer))
+            (set-buffer-modified-p nil))
+          (kill-buffer buffer)))
       (delete-file autoload-file)
       (delete-directory root t))))
 

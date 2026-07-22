@@ -155,13 +155,22 @@ Every file below a `.chezmoitemplates' directory is also a template."
           (string-suffix-p ".tmpl" name)
           (string-prefix-p "modify_" name)))))
 
+(defun chezmoi--auto-enable-file-p (file)
+  "Return non-nil when FILE should automatically enable `chezmoi-mode'.
+Chezmoi data files provide template input rather than target-state content, so
+exclude the `.chezmoidata' directory and top-level `.chezmoidata.*' files."
+  (when (and file chezmoi-root
+             (file-in-directory-p file chezmoi-root))
+    (let* ((relative (file-relative-name file chezmoi-root))
+           (top-level (car (file-name-split relative))))
+      (not (or (equal top-level ".chezmoidata")
+               (string-prefix-p ".chezmoidata." top-level))))))
+
 ;;;###autoload
 (defun chezmoi--mode-from-path ()
   "Activate `chezmoi-mode' in source files based on their path."
   (when (and chezmoi-auto-enable-mode
-             chezmoi-root
-             buffer-file-name
-             (file-in-directory-p buffer-file-name chezmoi-root))
+             (chezmoi--auto-enable-file-p buffer-file-name))
     (unless chezmoi-mode (chezmoi-mode))))
 
 ;;;###autoload

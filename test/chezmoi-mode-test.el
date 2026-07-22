@@ -185,6 +185,21 @@
             (should (= mode-calls 1))))
       (delete-directory root t))))
 
+(ert-deftest chezmoi-mode-from-path-ignores-data-files ()
+  (let* ((root (make-temp-file "chezmoi.root" t))
+         (chezmoi-root (file-name-as-directory root))
+         (mode-calls 0))
+    (unwind-protect
+        (cl-letf (((symbol-function 'chezmoi-mode)
+                   (lambda (&optional _arg) (cl-incf mode-calls))))
+          (dolist (relative '(".chezmoidata/packages/emacs.toml"
+                              ".chezmoidata.toml"))
+            (with-temp-buffer
+              (setq buffer-file-name (expand-file-name relative root))
+              (chezmoi--mode-from-path)))
+          (should (= mode-calls 0)))
+      (delete-directory root t))))
+
 (ert-deftest chezmoi-mode-supports-real-polymode-template-buffers ()
   :tags '(integration)
   (skip-unless (and (locate-library "poly-any-go-template")
